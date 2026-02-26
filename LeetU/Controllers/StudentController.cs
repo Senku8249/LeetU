@@ -58,7 +58,11 @@ public class StudentController : ControllerBase
         {
             return new NotFoundObjectResult(e.Message);
         }
-        
+        catch (CourseAlreadyAssignedException ex)
+        {
+            return Conflict(ex.Message); // 409 + текст ошибки в теле
+        }
+
         return new OkResult();
     }
 

@@ -44,10 +44,11 @@ public class CourseController : ControllerBase
     {
         var rowsAffected = await _courseService.SetCourseAsync(course);
 
-        if (rowsAffected > 0)
-            return new OkResult();
+        if (rowsAffected == 0)
+            return BadRequest("'message': 'Не удалось создать курс'");
 
-        throw new Exception("There was an error creating the course");
+        //throw new Exception("There was an error creating the course");
+        return new OkResult();
     }
 
     // GET api/courses/ids
