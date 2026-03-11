@@ -12,7 +12,7 @@ namespace LeetU.Services;
 public class CourseService : ICourseService
 {
     private readonly ICourseRepository _courseRepository;
-
+    
     public CourseService(ICourseRepository courseRepository)
     {
         _courseRepository = courseRepository;
@@ -66,4 +66,8 @@ public class CourseService : ICourseService
             yield return entity.Id;
     }
 
+    PagedResponse<CourseWithStatsResponse> ICourseService.GetCoursesWithStats(int page, int pageSize)
+    {
+        throw new NotImplementedException();
+    }
 }

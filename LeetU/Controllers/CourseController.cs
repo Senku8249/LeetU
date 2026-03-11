@@ -58,4 +58,15 @@ public class CourseController : ControllerBase
         var ids = _courseService.GetAllCourseIds();
         return Ok(ids);
     }
+    [HttpGet("with-stats")]//10.03 контроллер курсов
+    public IActionResult GetCoursesWithStats([FromQuery] int page, [FromQuery] int pageSize)
+    {
+        if (page <= 0 || pageSize <= 0)
+        {
+            return BadRequest("page и pageSize должны быть положительными числами");
+        }
+
+        var result = _courseService.GetCoursesWithStats(page, pageSize);
+        return Ok(result);
+    }
 }
