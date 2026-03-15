@@ -9,7 +9,7 @@ namespace LeetU.Services;
 /// The course service. Contains the BUSINESS LOGIC for anything to do with courses. This includes marshalling the data access for controllers to the data layer.
 /// We use mappers to map Entities to Models and vice versa. We do not send entities over the wire, we always transform them tro models
 /// </summary>
-public class CourseService : ICourseService
+/*public class CourseService : ICourseService
 {
     private readonly ICourseRepository _courseRepository;
     
@@ -69,5 +69,93 @@ public class CourseService : ICourseService
     PagedResponse<CourseWithStatsResponse> ICourseService.GetCoursesWithStats(int page, int pageSize)
     {
         throw new NotImplementedException();
+    }
+}*/
+
+public class CourseService : ICourseService
+{
+    private readonly ICourseRepository _courseRepository;
+
+    public CourseService(ICourseRepository courseRepository)
+    {
+        _courseRepository = courseRepository;
+    }
+
+    public IEnumerable<Course> GetCourses(params long[] courseIds)
+    {
+        var courses = _courseRepository.Get(c => courseIds.Any(id => c.Id == id) || courseIds.Length == 0);
+
+        foreach (var entity in courses)
+            yield return EntityToModel.CreateCourseFromEntity(entity);
+    }
+
+    public async Task<int> SetCourseAsync(Course course)
+    {
+        var entity = ModelToEntity.CreateEntityFromCourse(course);
+        await _courseRepository.InsertAsync(entity);
+        var rowsAffected = await _courseRepository.SaveChangesAsync();
+        return rowsAffected;
+    }
+
+    public async Task<int> UpdateCourseAsync(Course course)
+    {
+        var existingEntity = _courseRepository.Get(c => c.Id == course.Id).FirstOrDefault();
+        if (existingEntity == null)
+            return 0;
+
+        var entity = ModelToEntity.UpdateEntityFromCourse(existingEntity, course);
+        _courseRepository.Update(entity);
+        var rowsAffected = await _courseRepository.SaveChangesAsync();
+        return rowsAffected;
+    }
+
+    public async Task<int> DeleteCourseAsync(long courseId)
+    {
+        var entity = _courseRepository.Get(c => c.Id == courseId).FirstOrDefault();
+        if (entity == null)
+            return 0;
+
+        if (entity.StudentCourses.Any())
+            throw new Exception("Cannot delete a course that has students enrolled in it");
+
+        _courseRepository.Delete(entity);
+        var rowsAffected = await _courseRepository.SaveChangesAsync();
+        return rowsAffected;
+    }
+
+    public IEnumerable<long> GetAllCourseIds()
+    {
+        var entities = _courseRepository.Get(c => true);
+
+        foreach (var entity in entities)
+            yield return entity.Id;
+    }
+
+    public PagedResponse<CourseWithStatsResponse> GetCoursesWithStats(int page, int pageSize)
+    {
+        if (page <= 0 || pageSize <= 0)
+            throw new ArgumentException("page и pageSize должны быть положительными числами");
+
+        var skip = (page - 1) * pageSize;
+
+        var totalCount = _courseRepository.GetCoursesCount();
+        var courseEntities = _courseRepository.GetCoursesWithStudentCount(skip, pageSize);
+
+        var items = courseEntities.Select(course => new CourseWithStatsResponse
+        {
+            Id = course.Id,
+            Name = course.Name,
+            Description = course.Description,
+            StudentCount = course.StudentCount
+        });
+
+        return new PagedResponse<CourseWithStatsResponse>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            HasNextPage = skip + pageSize < totalCount
+        };
     }
 }

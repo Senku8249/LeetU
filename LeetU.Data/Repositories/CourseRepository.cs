@@ -14,7 +14,7 @@ namespace LeetU.Data.Repositories
         {
         }
     }*/
-    public class CourseRepository : RepositoryCrud<Course>, ICourseRepository
+    /*public class CourseRepository : RepositoryCrud<Course>, ICourseRepository
     {
         private readonly StudentContext _context;
 
@@ -35,6 +35,37 @@ namespace LeetU.Data.Repositories
                     Name = course.Name,
                     Description = course.Description,
                     StudentCount = _context.StudentCourses.Count(sc => sc.CourseId == course.Id)
+                })
+                .ToList();
+        }
+
+        public int GetCoursesCount()
+        {
+            return _context.Courses.Count();
+        }
+    }*/
+    
+    public class CourseRepository : RepositoryCrud<Course>, ICourseRepository
+    {
+        private readonly StudentContext _context;
+
+        public CourseRepository(StudentContext context) : base(context)
+        {
+            _context = context;
+        }
+
+        public IEnumerable<CourseWithStudentCountEntity> GetCoursesWithStudentCount(int skip, int take)
+        {
+            return _context.Courses
+                .OrderBy(course => course.Id)
+                .Skip(skip)
+                .Take(take)
+                .Select(course => new CourseWithStudentCountEntity
+                {
+                    Id = course.Id,
+                    Name = course.Name,
+                    Description = course.Description,
+                    StudentCount = course.StudentCourses.Count()
                 })
                 .ToList();
         }

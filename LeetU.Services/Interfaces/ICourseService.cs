@@ -2,7 +2,7 @@
 
 namespace LeetU.Services.Interfaces;
 
-public interface ICourseService
+/*public interface ICourseService
 {
     PagedResponse<CourseWithStatsResponse> GetCoursesWithStats(int page, int pageSize);
     //предыдущая реализация
@@ -16,4 +16,18 @@ public interface ICourseService
     Task<int> SetCourseAsync(Course course);
     Task<int> UpdateCourseAsync(Course course);
     Task<int> DeleteCourseAsync(long courseId);
+}*/
+public interface ICourseService
+{
+    IEnumerable<Course> GetCourses(params long[] courseIds);
+
+    IEnumerable<long> GetAllCourseIds();
+
+    Task<int> SetCourseAsync(Course course);
+
+    Task<int> UpdateCourseAsync(Course course);
+
+    Task<int> DeleteCourseAsync(long courseId);
+
+    PagedResponse<CourseWithStatsResponse> GetCoursesWithStats(int page, int pageSize);
 }
