@@ -18,8 +18,8 @@ builder.Services.AddControllers();
 
 //old vers
 //builder.Services.AddSqlite<StudentContext>("DataSource=file:Student.db;Mode=ReadWrite"); 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")??throw new Exception("Отсутсвует строка подключения");
-builder.Services.AddSqlite<StudentContext>(connectionString!);
+builder.Services.AddDbContext<StudentContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IStudentRepositoryCrud, StudentRepository>();
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IStudentCourseRepositoryCrud, StudentCourseRepository>();
