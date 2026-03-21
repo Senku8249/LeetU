@@ -1,33 +1,53 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Concurrent;
+using System;
+using System.Collections.Generic;
 
 namespace LeetU.Controllers;
 
 /// <summary>
-/// Контроллер аудита. Хранит события в статической коллекции без ограничения размера — утечка памяти.
+/// Контроллер аудита. Хранит ограниченное количество последних событий в памяти.
 /// </summary>
 [ApiController]
 [Route("audit")]
 public class AuditController : ControllerBase
 {
-    // Утечка памяти: неограниченный рост коллекции при каждом запросе.
-    private static readonly ConcurrentBag<AuditEntry> _auditLog = new();
+    private static readonly Queue<AuditEntry> AuditLog = new Queue<AuditEntry>();
+    private static readonly object SyncRoot = new object();
+    private const int MaxEntries = 1000;
 
-    public AuditController() { }
+    public AuditController()
+    {
+    }
 
     [HttpPost("log")]
     public IActionResult Log([FromBody] AuditEntry entry)
     {
         entry.Timestamp = DateTime.UtcNow;
         entry.RequestPath = HttpContext.Request.Path;
-        _auditLog.Add(entry);
+
+        lock (SyncRoot)
+        {
+            if (AuditLog.Count >= MaxEntries)
+            {
+                AuditLog.Dequeue();
+            }
+
+            AuditLog.Enqueue(entry);
+        }
+
         return Ok();
     }
 
     [HttpGet("log")]
     public IActionResult GetLog()
     {
-        var list = _auditLog.ToArray();
+        AuditEntry[] list;
+
+        lock (SyncRoot)
+        {
+            list = AuditLog.ToArray();
+        }
+
         return Ok(list);
     }
 }

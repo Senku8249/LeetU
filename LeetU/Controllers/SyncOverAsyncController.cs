@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace LeetU.Controllers;
 
 /// <summary>
-/// Контроллер с синхронным вызовом асинхронных операций — риск deadlock в ASP.NET.
+/// Контроллер без блокирующих sync-over-async вызовов.
 /// </summary>
 [ApiController]
 [Route("sync")]
@@ -18,27 +18,24 @@ public class SyncOverAsyncController : ControllerBase
     }
 
     /// <summary>
-    /// GET sync/course/{id} — получение курса через .GetAwaiter().GetResult() (sync over async).
-    /// В контексте с SynchronizationContext (например UI или старый ASP.NET) может вызвать deadlock.
+    /// GET sync/course/{id} — получение курса без блокирующего ожидания.
     /// </summary>
     [HttpGet("course/{courseId:long}")]
-    public IActionResult GetCourseSync([FromRoute] long courseId)
+    public IActionResult GetCourse([FromRoute] long courseId)
     {
         var courses = _courseService.GetCourses(courseId);
         var course = courses.FirstOrDefault();
-        // Имитация вызова async: блокирующее ожидание задачи.
-        Task.Delay(0).GetAwaiter().GetResult();
+
         return course == null ? NotFound() : Ok(course);
     }
 
     /// <summary>
-    /// POST sync/course — создание курса через .Result.
-    /// SetCourseAsync(...).Result блокирует поток и может привести к deadlock.
+    /// POST sync/course — полностью асинхронное создание курса через await.
     /// </summary>
     [HttpPost("course")]
-    public IActionResult CreateCourseSync([FromBody] LeetU.Models.Course course)
+    public async Task<IActionResult> CreateCourseAsync([FromBody] LeetU.Models.Course course)
     {
-        var rows = _courseService.SetCourseAsync(course).Result;
+        var rows = await _courseService.SetCourseAsync(course);
         return rows > 0 ? Ok() : BadRequest();
     }
 }
