@@ -27,6 +27,10 @@ builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 100;
+});
 
 var app = builder.Build();
 
