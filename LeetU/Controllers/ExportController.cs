@@ -19,9 +19,6 @@ public class ExportController : ControllerBase
         _courseService = courseService;
     }
 
-    /// <summary>
-    /// GET export/students — получение списка студентов без sync-over-async.
-    /// </summary>
     [HttpGet("students")]
     public IActionResult ExportStudents()
     {
@@ -29,9 +26,6 @@ public class ExportController : ControllerBase
         return Ok(students);
     }
 
-    /// <summary>
-    /// POST export/assign/{studentId}/{courseId} — полностью асинхронное назначение студента на курс.
-    /// </summary>
     [HttpPost("assign/{studentId:long}/{courseId:long}")]
     public async Task<IActionResult> AssignCourseAsync([FromRoute] long studentId, [FromRoute] long courseId)
     {

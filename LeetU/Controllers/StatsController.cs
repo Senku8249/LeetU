@@ -1,11 +1,13 @@
 using LeetU.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace LeetU.Controllers;
 
 /// <summary>
-/// Контроллер тяжёлой статистики с кэшем, у которого есть TTL и ограничение размера.
+/// Контроллер тяжёлой статистики с кэшем, TTL и асинхронной синхронизацией без lock во время await.
 /// </summary>
 [ApiController]
 [Route("stats")]
@@ -15,6 +17,9 @@ public class StatsController : ControllerBase
     private readonly IMemoryCache _cache;
 
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+
+    // Отдельный семафор на каждый ключ кэша
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> KeyLocks = new();
 
     public StatsController(ICourseService courseService, IMemoryCache cache)
     {
@@ -63,8 +68,19 @@ public class StatsController : ControllerBase
 
         var key = $"heavy-async:{page}:{size}";
 
-        if (!_cache.TryGetValue(key, out object? result))
+        if (_cache.TryGetValue(key, out object? cachedResult))
+            return Ok(cachedResult);
+
+        var semaphore = KeyLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+
+        await semaphore.WaitAsync();
+        try
         {
+            // Повторная проверка после входа в семафор:
+            // пока мы ждали, другой запрос мог уже заполнить кэш
+            if (_cache.TryGetValue(key, out cachedResult))
+                return Ok(cachedResult);
+
             await Task.Delay(10);
 
             var courses = _courseService
@@ -73,7 +89,7 @@ public class StatsController : ControllerBase
                 .Take(size)
                 .ToList();
 
-            result = new
+            var result = new
             {
                 Page = page,
                 PageSize = size,
@@ -85,8 +101,12 @@ public class StatsController : ControllerBase
                 .SetSize(1);
 
             _cache.Set(key, result, cacheOptions);
-        }
 
-        return Ok(result);
+            return Ok(result);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 }
